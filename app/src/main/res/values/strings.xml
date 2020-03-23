@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Cripta</string>
+    <string name="price_hint">Tap to update</string>
+    <string name="refresh_content_description">Refreshes the price view.</string>
+    <string name="update_successful">Updated successfully</string>
+    <string name="not_live">Not yet live</string>
+    <string name="splash_description">App icon on splash screen</string>
+    <string name="fetching">Fetching...</string>
+    <string name="not_load_hint">Prices not updating? Try refreshing.</string>
+</resources>
