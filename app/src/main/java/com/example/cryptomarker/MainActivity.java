@@ -5,26 +5,24 @@ package com.example.cryptomarker;
 // Add RecyclerView to the MainActivity (DONE).
 // Switching back to OkHttp. Volley does not work without passing application context.
 
+import android.annotation.SuppressLint;
+import android.content.pm.ActivityInfo;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import android.annotation.SuppressLint;
-import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.ImageButton;
-import android.widget.TextView;
-import android.widget.Toast;
+import com.google.android.material.snackbar.Snackbar;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -43,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
             "https://cdn.freebiesupply.com/logos/thumbs/2x/ethereum-1-logo.png",
             "https://cdn.freebiesupply.com/logos/large/2x/ripple-2-logo-png-transparent.png",
             "https://cryptologos.cc/logos/tether-usdt-logo.png"};
+
     boolean[] changes = new boolean[limit];
 
     OkHttpClient client = new OkHttpClient();
@@ -62,32 +61,76 @@ public class MainActivity extends AppCompatActivity {
 
         // Toolbar with custom properties.
         final Toolbar toolbar = this.findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        setSupportActionBar(toolbar); // Make it the action bar for this.
         Objects.requireNonNull(getSupportActionBar()).setDisplayShowTitleEnabled(false);
 
-        final ImageButton imageButton = this.findViewById(R.id.ref_btn);
         final RecyclerView recyclerView = this.findViewById(R.id.crypto_list);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        imageButton.setOnClickListener(v -> {
-            // TODO Show and refresh prices on button click.
-            try{
-                Thread.sleep(1000);
-                // Make the API call.
-                final Request request = new Request.Builder().url(url).build();
-                new PrepData().execute(request);
-                recyclerView.setAdapter(new RecyclerAdapter(prices, imageUrls, symbols, changes));
-            } catch (Exception e){
-                Toast toast = Toast.makeText(MainActivity.this, e.toString(), Toast.LENGTH_LONG);
-                toast.setGravity(Gravity.CENTER, Gravity.CENTER_HORIZONTAL, 40);
-                toast.show();
-            }
+        // Animation anim;
+        // anim = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate);
 
-            Toast toast = Toast.makeText(MainActivity.this, "Updated", Toast.LENGTH_SHORT);
-            toast.setGravity(Gravity.CENTER, Gravity.CENTER_HORIZONTAL, 400);
-            toast.show();
-        });
+        // Try to load recyclerview onCreate
+        try {
+            Thread.sleep(1000);
+            // Make the API call onCreate, otherwise refreshing not possible.
+            final Request request = new Request.Builder().url(url).build();
+            new PrepData().execute(request);
+            recyclerView.setAdapter(new RecyclerAdapter(prices, imageUrls, symbols, changes));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        SwipeRefreshLayout mySwipeRefreshLayout = findViewById(R.id.swiper);
+        mySwipeRefreshLayout.setOnRefreshListener(
+                new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        try {
+                            // No need to sleep now.
+                            // Thread.sleep(1000);
+
+                            // Make the API call.
+                            final Request request = new Request.Builder().url(url).build();
+                            new PrepData().execute(request);
+                            recyclerView.setAdapter(new RecyclerAdapter(prices, imageUrls, symbols, changes));
+
+                            // If successfully updated.
+                            Snackbar sb = Snackbar.make(mySwipeRefreshLayout, "Updated", Snackbar.LENGTH_SHORT);
+                            sb.setBackgroundTint(getResources().getColor(R.color.pink));
+                            sb.show();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                        mySwipeRefreshLayout.setRefreshing(false);
+                    }
+                });
+        /*
+            This image button was the original implementation for updating the recyclerview.
+
+            imageButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Show and refresh prices on button click.
+                    imageButton.startAnimation(anim);
+                    try {
+                        Thread.sleep(1000);
+                        // Make the API call.
+                        final Request request = new Request.Builder().url(url).build();
+                        new PrepData().execute(request);
+                        recyclerView.setAdapter(new RecyclerAdapter(prices, imageUrls, symbols, changes));
+                    } catch (Exception e) {
+                        Snackbar.make(v, e.toString(), Snackbar.LENGTH_LONG)
+                                .setAction("Action", null);
+                    }
+                    // If successfully updated.
+                    Snackbar.make(v, "Updated", Snackbar.LENGTH_SHORT)
+                            .setAction("Action", null).show();
+                }
+            });
+        */
     }
 
     // Asynchronous task runs in background to make API call and sets the data resources to be set as RecyclerView adapter.
@@ -120,9 +163,7 @@ public class MainActivity extends AppCompatActivity {
                 for (int i = 0; i < coins.length(); i++) {
                     prices[i] = "$ " + coins.getJSONObject(i).getString("price").substring(0, 8);
                     symbols[i] = coins.getJSONObject(i).getString("symbol");
-                    if(coins.getJSONObject(i).getInt("change") > 0)
-                        changes[i] = true;
-                    else changes[i] = false;
+                    changes[i] = coins.getJSONObject(i).getInt("change") > 0;
                 }
                 // Toast.makeText(MainActivity.this, imageUrls[0], Toast.LENGTH_LONG).show();
             } catch (Exception e) {
@@ -132,9 +173,5 @@ public class MainActivity extends AppCompatActivity {
 
             }
         }
-    }
-
-    public void buttonBounce(View view){
-
     }
 }
